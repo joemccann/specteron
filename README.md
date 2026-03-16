@@ -141,7 +141,7 @@ Ideas for new skills:
 
 ## How It Works
 
-![browse-cdp architecture blueprint](how-it-works-blueprint.png)
+![browse-cdp architecture blueprint](.github/how-it-works-blueprint.png)
 
 1. **Describe task** — You tell pi what you want in plain English
 2. **Load skill** — pi reads the relevant skill (e.g. `youtube-transcript`) and plans the approach
