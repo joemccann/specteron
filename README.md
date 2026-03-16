@@ -141,24 +141,14 @@ Ideas for new skills:
 
 ## How It Works
 
-```
-┌─────────┐     natural language     ┌─────────┐
-│   You   │ ──────────────────────── │   pi    │
-└─────────┘                          └────┬────┘
-                                          │ runs scripts / eval
-                                          ▼
-                                    ┌───────────┐     WebSocket (CDP)     ┌─────────────┐
-                                    │  cdp.mjs  │ ────────────────────── │   Chrome     │
-                                    └───────────┘                        │  (your tabs) │
-                                                                         └─────────────┘
-```
+![browse-cdp architecture blueprint](how-it-works-blueprint.png)
 
-1. You describe what you want in plain English
-2. pi reads the relevant skill and decides what to do
-3. It calls `cdp.mjs` commands — `list`, `eval`, `click`, `shot`, etc.
-4. `cdp.mjs` connects to Chrome over the DevTools Protocol WebSocket
-5. Chrome executes the commands on your real, live tabs
-6. pi reads the results and continues — extracting data, generating reports, or taking the next action
+1. **Describe task** — You tell pi what you want in plain English
+2. **Load skill** — pi reads the relevant skill (e.g. `youtube-transcript`) and plans the approach
+3. **Run commands** — pi calls `cdp.mjs` with commands like `list`, `eval`, `click`, `shot`, `nav`, `type`
+4. **Execute in browser** — `cdp.mjs` connects to Chrome over a WebSocket using the DevTools Protocol
+5. **Return data** — Chrome sends back DOM content, screenshots, evaluation results
+6. **Generate output** — pi synthesizes the data into reports, summaries, or takes the next action
 
 There's no browser to spin up, no login flows to replay, no cookies to manage. It's just your browser.
 
