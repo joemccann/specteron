@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+/tmp/
+
+# Pi local settings (personal, not shared)
+.pi/settings.local.json
