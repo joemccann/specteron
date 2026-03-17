@@ -2,6 +2,78 @@
 
 Recurring tasks that run automatically via the [task scheduler](.pi/extensions/task-scheduler.ts). Defined in [`.pi/tasks.json`](.pi/tasks.json).
 
+## Adding a New Task
+
+You can add tasks two ways: with the `/tasks-add` command interactively, or by editing `.pi/tasks.json` directly.
+
+### Schema
+
+Every task has these fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | yes | Unique identifier (kebab-case) |
+| `description` | string | yes | Natural language instruction for pi to execute |
+| `schedule` | object | yes | When and how often the task runs (see below) |
+| `status` | string | yes | `pending` / `running` / `completed` / `failed` |
+| `createdAt` | ISO 8601 | yes | When the task was created |
+| `lastRunAt` | ISO 8601 or null | no | When the task last ran |
+| `completedAt` | ISO 8601 or null | no | When the task completed (one-time tasks only) |
+
+### Recurring Task
+
+Runs repeatedly on a fixed interval. The scheduler fires the task when `now - lastRunAt >= intervalMs` (or immediately on first run if `lastRunAt` is null).
+
+```json
+{
+  "id": "my-recurring-task",
+  "description": "Check the weather forecast and display it in a Specteron-branded widget.",
+  "schedule": {
+    "type": "interval",
+    "intervalMs": 3600000
+  },
+  "status": "pending",
+  "createdAt": "2026-03-17T12:00:00.000Z",
+  "lastRunAt": null,
+  "completedAt": null
+}
+```
+
+Common intervals: `600000` (10 min), `3600000` (1 hour), `86400000` (24 hours).
+
+An optional `startAfter` field (ISO 8601) delays the first run until after that date.
+
+### One-Time Task
+
+Runs once at or after the specified date, then moves to `completed` status.
+
+```json
+{
+  "id": "cancel-subscription",
+  "description": "Navigate to the account page and cancel the monthly subscription.",
+  "schedule": {
+    "type": "date",
+    "date": "2026-04-01T12:00:00.000Z"
+  },
+  "status": "pending",
+  "createdAt": "2026-03-17T12:00:00.000Z",
+  "lastRunAt": null,
+  "completedAt": null
+}
+```
+
+### Guidelines
+
+- **Description** is injected as a user message to pi — write it as a clear, step-by-step instruction.
+- Tasks run in **background `pi -p` processes** (non-interactive). They have access to all tools and extensions.
+- Task output is logged to `.pi/task-{id}.log`.
+- Tasks that produce widgets should follow the [Specteron brand system](.pi/skills/specteron-brand/SKILL.md).
+- Call `complete_task` with the task `id` at the end of every task execution so the scheduler can track state correctly.
+
+---
+
+## Active Tasks
+
 ---
 
 ## Gmail Inbox Monitor
