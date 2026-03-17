@@ -8,6 +8,19 @@
  * - "date" tasks: due when now >= scheduled date, run once then mark completed.
  * - "interval" tasks: due when now >= lastRunAt + intervalMs, run repeatedly.
  *
+ * Wake-up recovery:
+ *   When the computer sleeps, background `pi -p` processes may be killed by the
+ *   OS, leaving tasks stuck in "running" status. The main pi Node.js process
+ *   survives sleep (it freezes and resumes), so the 60s setInterval continues
+ *   after wake. On every check cycle AND on session_start, stale "running" tasks
+ *   are detected (running longer than STALE_TASK_THRESHOLD_MS, default 30min)
+ *   and reset to "pending". Once reset, isDue() catches up on missed intervals
+ *   since lastRunAt + intervalMs < now after a long sleep. This means:
+ *     - If pi was already running when the computer slept → tasks recover
+ *       within ~60s of wake via the periodic checkAndRunTasks().
+ *     - If pi is launched fresh after wake → tasks recover immediately in
+ *       session_start via recoverStaleTasks().
+ *
  * A background interval re-checks every 60s for interval-based tasks.
  *
  * Also provides:
@@ -45,6 +58,11 @@ interface Task {
 interface TasksFile {
 	tasks: Task[];
 }
+
+// If a task has been in "running" status longer than this, assume the process
+// was killed (e.g. by sleep/shutdown) and reset it to "pending" so it can be
+// re-evaluated by isDue().
+const STALE_TASK_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
 export default function (pi: ExtensionAPI) {
 	let tasksPath = "";
@@ -87,6 +105,45 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Recover tasks stuck in "running" status after a sleep/wake cycle or crash.
+	 * If a task has been "running" for longer than STALE_TASK_THRESHOLD_MS, reset
+	 * it to "pending" so isDue() can re-evaluate it. For interval tasks, lastRunAt
+	 * is preserved so the catch-up logic works correctly (now >= lastRunAt + intervalMs).
+	 * Returns the list of recovered task IDs.
+	 */
+	function recoverStaleTasks(now: number): string[] {
+		const data = loadTasks(tasksPath);
+		const recovered: string[] = [];
+
+		for (const task of data.tasks) {
+			if (task.status !== "running") continue;
+
+			// Determine how long it's been running
+			const runStart = task.lastRunAt ? new Date(task.lastRunAt).getTime() : 0;
+			const elapsed = now - runStart;
+
+			if (elapsed > STALE_TASK_THRESHOLD_MS || runStart === 0) {
+				// Task is stale — the background process is likely dead
+				if (task.schedule.type === "date") {
+					// One-time task: reset to pending so it runs again
+					task.status = "pending";
+				} else {
+					// Interval task: reset to pending, keep lastRunAt so isDue()
+					// correctly detects it's overdue (lastRunAt + intervalMs < now)
+					task.status = "pending";
+				}
+				recovered.push(task.id);
+			}
+		}
+
+		if (recovered.length > 0) {
+			saveTasks(tasksPath, data);
+		}
+
+		return recovered;
 	}
 
 	/**
@@ -182,8 +239,16 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	function checkAndRunTasks(): void {
-		const data = loadTasks(tasksPath);
 		const now = Date.now();
+
+		// Recover any stale "running" tasks first — this is critical for wake-up
+		// scenarios where the `pi -p` background process was killed by OS sleep.
+		// Unlike session_start (which fires only once at launch), this runs every
+		// 60s via setInterval, so it catches stale tasks even after a sleep/wake
+		// cycle mid-session.
+		recoverStaleTasks(now);
+
+		const data = loadTasks(tasksPath);
 
 		for (const task of data.tasks) {
 			if (isDue(task, now)) {
@@ -203,8 +268,22 @@ export default function (pi: ExtensionAPI) {
 			return;
 		}
 
-		const data = loadTasks(tasksPath);
 		const now = Date.now();
+
+		// --- Wake-up recovery ---
+		// Detect tasks stuck in "running" from a previous session that was
+		// killed by sleep/shutdown. Reset them to "pending" so isDue() picks
+		// them up. This must run BEFORE the due-task check below.
+		const recovered = recoverStaleTasks(now);
+		if (recovered.length > 0 && ctx.hasUI) {
+			ctx.ui.notify(
+				`🔄 Recovered ${recovered.length} stale task(s) after wake: ${recovered.join(", ")}`,
+				"info",
+			);
+		}
+
+		// Reload after potential recovery edits
+		const data = loadTasks(tasksPath);
 		const dueTasks = data.tasks.filter((t) => isDue(t, now));
 		const scheduledTasks = data.tasks.filter((t) => t.status === "pending" && !isDue(t, now));
 		const hasIntervalTasks = data.tasks.some((t) => t.schedule.type === "interval" && t.status !== "completed");
