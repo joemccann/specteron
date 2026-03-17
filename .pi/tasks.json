@@ -22,7 +22,19 @@
       },
       "status": "pending",
       "createdAt": "2026-03-17T14:30:00.000Z",
-      "lastRunAt": "2026-03-17T16:40:24.801Z",
+      "lastRunAt": "2026-03-17T18:21:18.170Z",
+      "completedAt": null
+    },
+    {
+      "id": "linkedin-inbox-cleaner",
+      "description": "navigate or open the following url: https://www.linkedin.com/messaging/? once it redirects and loads, scroll down the webpage under the <ul> Conversation List until no more messages arrive. then, open each message by clicking on it, capture the url for that message. if the message content is someone trying to sell me something or is generic, mark it read. if it is not, add the person's name, the summary of the message and the url to a table. this table should then be displayed using the specteron brand skill.",
+      "schedule": {
+        "type": "interval",
+        "intervalMs": 86400000
+      },
+      "status": "pending",
+      "createdAt": "2026-03-17T17:41:44.763Z",
+      "lastRunAt": "2026-03-17T18:00:15.896Z",
       "completedAt": null
     }
   ]

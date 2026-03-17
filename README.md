@@ -1,4 +1,4 @@
-# browse-cdp
+# Specteron
 
 A [pi](https://github.com/badlogic/pi-mono) project with Chrome DevTools Protocol automation, scheduled task execution, and Gmail inbox monitoring powered by Gmail's Gemini AI.
 
