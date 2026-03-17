@@ -1,5 +1,9 @@
 # Specteron — Project Context
 
+## Tasks
+
+Recurring tasks that run automatically via the [task scheduler](.pi/extensions/task-scheduler.ts). Defined in [`.pi/tasks.json`](.pi/tasks.json).
+
 ## Brand System Enforcement
 
 **Every time you generate visual output in this project, you MUST load and follow the Specteron brand skill first.**
