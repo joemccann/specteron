@@ -184,7 +184,13 @@ export default function (pi: ExtensionAPI) {
 			{
 				cwd: projectCwd,
 				stdio: ["ignore", "pipe", "pipe"],
-				env: { ...process.env },
+				env: {
+					...process.env,
+					// Default widget positioning: top-left, 50% width/height
+					GLIMPSE_DEFAULT_POSITION: process.env.GLIMPSE_DEFAULT_POSITION || "top-left",
+					GLIMPSE_DEFAULT_WIDTH: process.env.GLIMPSE_DEFAULT_WIDTH || "50%",
+					GLIMPSE_DEFAULT_HEIGHT: process.env.GLIMPSE_DEFAULT_HEIGHT || "50%",
+				},
 				detached: false,
 			},
 		);

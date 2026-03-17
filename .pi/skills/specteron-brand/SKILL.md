@@ -150,6 +150,17 @@ document.querySelector('.theme-toggle')?.addEventListener('click', () => {
 
 **If a widget is generated without this theme system, it is non-compliant and must be fixed before delivery.**
 
+### IMPORTANT: Working Implementation Reference
+
+See `WIDGET-TEMPLATE.md` in this skill directory for the **exact working code patterns**. Key requirements:
+
+1. **Theme init script MUST run before HTML** — Use an IIFE immediately after `<style>`
+2. **SVG icons use innerHTML injection** — Don't use hidden SVGs with display toggle
+3. **Use `!important`** on `border-left`, link colors to ensure they apply
+4. **Hardcode `#05AD98`** for badge/accent — don't rely only on CSS variables
+5. **Simple IDs** (`id="toggle"`, `id="icon"`) — complex selectors can fail
+6. **Call `update()` immediately** after defining it in the second script
+
 ---
 
 ## 1. Color System — The Specteron Spectrum
