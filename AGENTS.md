@@ -7,7 +7,7 @@
 Before creating any `show_widget`, `design_deck`, HTML, SVG, CSS, chart, diagram, or UI mockup:
 1. Read `.pi/skills/specteron-brand/SKILL.md` for the complete design system
 2. Apply all color tokens, typography, spacing, and component rules exactly
-3. Reference `brand-guidelines/brand/specteron-design-tokens.json` for machine-readable tokens
+3. Reference `brand/brand/specteron-design-tokens.json` for machine-readable tokens
 
 ### Quick Reference (always in effect)
 
@@ -24,7 +24,7 @@ Before creating any `show_widget`, `design_deck`, HTML, SVG, CSS, chart, diagram
 
 ### Brand Assets Location
 ```
-brand-guidelines/
+brand/
 ├── brand/
 │   ├── specteron-brand-system.md          # Full specification (9 sections)
 │   ├── specteron-design-tokens.json       # Machine-readable tokens

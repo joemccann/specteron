@@ -14,8 +14,8 @@ description: Enforces the Specteron brand system on all visual output — widget
 - UI mockups or prototypes
 - Any code that renders to a screen
 
-The full brand specification lives in `brand-guidelines/brand/specteron-brand-system.md`.
-Design tokens live in `brand-guidelines/brand/specteron-design-tokens.json`.
+The full brand specification lives in `brand/brand/specteron-brand-system.md`.
+Design tokens live in `brand/brand/specteron-design-tokens.json`.
 
 ---
 

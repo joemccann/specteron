@@ -20,9 +20,9 @@
         "type": "interval",
         "intervalMs": 600000
       },
-      "status": "pending",
+      "status": "running",
       "createdAt": "2026-03-17T14:30:00.000Z",
-      "lastRunAt": "2026-03-17T18:21:18.170Z",
+      "lastRunAt": "2026-03-17T18:31:24.117Z",
       "completedAt": null
     },
     {

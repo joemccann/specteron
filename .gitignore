@@ -8,6 +8,6 @@
 artifacts/
 
 # Brand assets (binary files)
-brand-guidelines/
+brand/
 *.zip
 .DS_Store
