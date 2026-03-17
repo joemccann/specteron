@@ -1,6 +1,8 @@
 # Specteron
 
-A [pi](https://github.com/badlogic/pi-mono) project with Chrome DevTools Protocol automation, scheduled task execution, and more.
+The Claude Code Chrome Extension killer.
+
+Specteron is a [pi](https://github.com/badlogic/pi-mono) project with Chrome DevTools Protocol automation, scheduled task execution, and more, with no limits or rules.
 
 ## Features
 
@@ -35,7 +37,7 @@ Patches to `pi-generative-ui` and its `glimpseui` dependency:
 - [pi](https://github.com/badlogic/pi-mono) coding agent
 - macOS (for Glimpse native widgets)
 - Chrome with remote debugging: `/Applications/Chrome Debug.app` (or any Chrome launched with `--remote-debugging-port=9222`)
-- Gmail account logged in to Chrome
+- Follow this [gist](https://gist.github.com/joemccann/e903f814997d4f56c63142ed86a2143a) to create a custom Chrome instance that avoids the need to approve every remote debugging connection.
 
 ### Install pi plugins
 
