@@ -1,6 +1,6 @@
 # Specteron
 
-A [pi](https://github.com/badlogic/pi-mono) project with Chrome DevTools Protocol automation, scheduled task execution, and Gmail inbox monitoring powered by Gmail's Gemini AI.
+A [pi](https://github.com/badlogic/pi-mono) project with Chrome DevTools Protocol automation, scheduled task execution, and more.
 
 ## Features
 
@@ -13,6 +13,10 @@ A pi extension that runs scheduled tasks in **background `pi -p` processes** —
 - **Background execution** — tasks spawn as separate `pi -p --no-session` processes
 - **Task logs** — output captured to `.pi/task-{id}.log`
 - **Commands**: `/tasks`, `/tasks-add`, `/tasks-remove`
+
+### 🖥️ Glimpse Widgets
+
+[Glimpse](https://github.com/nicobailon/glimpseui) is a native macOS windowing library that renders HTML/SVG/Canvas content in lightweight WKWebView windows — no Electron, no browser tab. Specteron uses Glimpse (via the [`pi-generative-ui`](https://www.npmjs.com/package/pi-generative-ui) plugin) to display task output as floating desktop widgets: email dashboards, data tables, charts, and any visual content the agent produces. Each widget is a self-contained HTML fragment styled with the [Specteron brand system](.pi/skills/specteron-brand/SKILL.md).
 
 ### 🔗 Glimpse Enhancements
 
