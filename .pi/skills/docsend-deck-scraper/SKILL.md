@@ -1,15 +1,15 @@
 ---
 name: docsend-deck-scraper
-description: Scrape a DocSend deck to PDF and interactive viewer. Takes a DocSend URL (must be authenticated in Chrome), screenshots every page, compiles them into a PDF, and displays a carousel widget. Usage: /skill:docsend-deck-scraper <url>
+description: Scrape a DocSend deck to PDF and interactive viewer. Takes a DocSend URL (must be authenticated in Chrome), extracts slide image URLs via page_data API, downloads them, compiles into a PDF, and displays a carousel widget. Usage: /skill:docsend-deck-scraper <url>
 ---
 
 # DocSend Deck Scraper
 
-Scrapes all pages of a DocSend presentation, compiles them into a PDF, and displays an interactive slide viewer widget.
+Scrapes all pages of a DocSend presentation by fetching signed image URLs from the page_data API endpoints, downloads them, compiles into a PDF, and displays an interactive slide viewer widget.
 
 ## Prerequisites
 
-- Chrome Debug running with remote debugging on port 9222
+- Chrome running with remote debugging on port 9222
 - DocSend URL must already be authenticated (logged in / passcode entered in Chrome)
 - The chrome-cdp skill must be available
 
@@ -37,115 +37,164 @@ Look for a tab with URL containing `docsend.com/view/`. If found, use its target
 
 Wait 3 seconds for the page to fully load.
 
-### 2. Check Authentication
+### 2. Dismiss Cookie Modal
 
-Run this eval to detect if authentication is required:
+DocSend shows a cookie consent modal. Dismiss it by clicking "Decline":
 
 ```bash
 /Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
-  var authForm = document.querySelector('input[type=\"email\"], input[type=\"password\"], input[name=\"passcode\"], form[action*=\"auth\"], [data-testid=\"email-input\"]');
-  var loginText = document.body.innerText.toLowerCase();
-  var needsAuth = authForm !== null || loginText.includes('enter your email') || loginText.includes('enter passcode') || loginText.includes('verify your identity');
-  JSON.stringify({ needsAuth: needsAuth });
+  var declineBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Decline');
+  if (declineBtn) { declineBtn.click(); 'dismissed'; } else { 'no-modal'; }
 "
 ```
 
-If `needsAuth` is `true`, **STOP** and tell the user:
+Wait 500ms after dismissing.
+
+### 3. Check Authentication
+
+DocSend requires authentication when it shows a modal with "X requests your action to continue" and an Email input.
+
+**Key indicator of authenticated state:** The presence of `.carousel-inner.js-carousel-inner` containing `.preso-view.page-view` images with a page count indicator (e.g., "1 / 49").
+
+```bash
+/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
+  var carousel = document.querySelector('.carousel-inner.js-carousel-inner');
+  var pageImages = document.querySelectorAll('img.preso-view.page-view');
+  var hasAuthModal = document.body.innerText.includes('requests your action to continue');
+  var hasEmailInput = document.querySelector('input[type=\"email\"]') !== null;
+  var pageMatch = document.body.innerText.match(/(\\d+)\\s*\\/\\s*(\\d+)/);
+  var totalPages = pageMatch ? parseInt(pageMatch[2]) : 0;
+  var isAuthenticated = carousel !== null && pageImages.length > 0 && totalPages > 0 && !hasAuthModal;
+  JSON.stringify({ 
+    isAuthenticated: isAuthenticated, 
+    totalPages: totalPages,
+    hasAuthModal: hasAuthModal,
+    hasEmailInput: hasEmailInput
+  });
+"
+```
+
+If `isAuthenticated` is `false`, **STOP** and tell the user:
 
 > **Authentication required.** Please log in or enter the passcode for this DocSend link in Chrome, then run this command again.
 
-### 3. Get Total Page Count
+### 4. Extract DocSend View ID
 
-Extract the page count from the "X / Y" indicator:
+Extract the view ID from the URL (e.g., `eajeenhwrx7quzge` from `https://docsend.com/view/eajeenhwrx7quzge`).
+
+### 5. Fetch All Page Image URLs via page_data API
+
+DocSend lazy-loads images, but we can fetch signed URLs directly from the `page_data` API endpoints. Each page has an endpoint like:
+
+```
+https://docsend.com/view/<view-id>/page_data/<page-number>
+```
+
+This returns JSON with `imageUrl` containing the signed CloudFront URL.
+
+Fetch all URLs from Chrome's context (to use the authenticated session):
 
 ```bash
 /Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
-  var pageIndicator = document.body.innerText.match(/(\\d+)\\s*\\/\\s*(\\d+)/);
-  JSON.stringify({ current: pageIndicator ? parseInt(pageIndicator[1]) : 1, total: pageIndicator ? parseInt(pageIndicator[2]) : 1 });
+window._allImageUrls = [];
+window._fetchComplete = false;
+
+(async function() {
+  var viewId = '<view-id>';
+  var totalPages = <total>;
+  for (var i = 1; i <= totalPages; i++) {
+    try {
+      var resp = await fetch('https://docsend.com/view/' + viewId + '/page_data/' + i);
+      var data = await resp.json();
+      window._allImageUrls.push({ page: i, url: data.imageUrl });
+    } catch(e) {
+      window._allImageUrls.push({ page: i, error: e.message });
+    }
+  }
+  window._fetchComplete = true;
+})();
+
+'started';
 "
 ```
 
-Store the `total` page count.
-
-### 4. Ensure Starting at Page 1
-
-If not on page 1, navigate to page 1 by clicking the left arrow until current page is 1, or use keyboard navigation:
+Wait for completion:
 
 ```bash
+# Poll until complete (usually 5-15 seconds for 50 pages)
 /Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
-  var viewer = document.querySelector('[class*=\"viewer\"], [class*=\"document\"], body');
-  if (viewer) viewer.focus();
+  JSON.stringify({ complete: window._fetchComplete, count: window._allImageUrls.length });
 "
 ```
 
-Then send Home key or click to first page. Alternatively, modify URL with `#page=1` and navigate.
+Retrieve the URLs:
 
-### 5. Create Output Directory
+```bash
+/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "JSON.stringify(window._allImageUrls);"
+```
 
-Ensure the output directory exists:
+Save to a temp file for processing.
+
+### 6. Create Output Directory
 
 ```bash
 mkdir -p /Users/joemccann/dev/apps/util/specteron/artifacts/docsend
 ```
 
-### 6. Screenshot Each Page
+### 7. Download All Slide Images
 
-For each page from 1 to total:
-
-#### a) Take screenshot
+Use Node.js to download all images:
 
 ```bash
-/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs shot <target> /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-001.png
-```
+node -e "
+const fs = require('fs');
+const https = require('https');
+const data = JSON.parse(fs.readFileSync('/tmp/docsend_urls.json', 'utf8'));
 
-Use zero-padded page numbers (001, 002, ... 049) for proper sorting.
+async function downloadImage(url, filepath) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(filepath);
+    https.get(url, (response) => {
+      response.pipe(file);
+      file.on('finish', () => { file.close(); resolve(); });
+    }).on('error', (err) => { fs.unlink(filepath, () => {}); reject(err); });
+  });
+}
 
-#### b) Navigate to next page
+async function main() {
+  for (const item of data) {
+    const pageNum = String(item.page).padStart(3, '0');
+    const filepath = '/Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-' + pageNum + '.png';
+    console.log('Downloading page ' + item.page + '...');
+    await downloadImage(item.url, filepath);
+  }
+  console.log('Done!');
+}
 
-Click the right side of the viewer or use keyboard:
-
-```bash
-/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
-  var rightArrow = document.querySelector('[aria-label*=\"next\" i], [aria-label*=\"right\" i], button[class*=\"next\"], [class*=\"right-arrow\"]');
-  if (rightArrow) rightArrow.click();
+main();
 "
 ```
 
-Or use keyboard navigation (more reliable):
+### 8. Get Deck Title
 
 ```bash
-/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs evalraw <target> "Input.dispatchKeyEvent" "{\"type\":\"keyDown\",\"key\":\"ArrowRight\",\"code\":\"ArrowRight\"}"
-/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs evalraw <target> "Input.dispatchKeyEvent" "{\"type\":\"keyUp\",\"key\":\"ArrowRight\",\"code\":\"ArrowRight\"}"
+/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "
+  var title = document.querySelector('meta[property=\"og:title\"]');
+  title ? title.content : document.title;
+"
 ```
 
-#### c) Wait for page transition
+Use this for the PDF filename (sanitized: lowercase, hyphens, no special chars).
 
-Wait 500ms–1000ms between pages to ensure the new page renders fully.
-
-#### d) Verify page changed
-
-Re-check the page indicator to confirm navigation succeeded before taking the next screenshot.
-
-### 7. Compile PDF
-
-After all screenshots are captured, use ImageMagick to compile them into a PDF:
+### 9. Compile PDF
 
 ```bash
-convert /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-*.png /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>.pdf
+magick /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-*.png /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>.pdf
 ```
 
-Extract `<deck-name>` from:
-- The document title in the page
-- The URL slug
-- Or use a timestamp: `docsend-YYYY-MM-DD-HHMMSS.pdf`
+If `magick` is not available, try `convert` or install via `brew install imagemagick`.
 
-To get the deck title:
-
-```bash
-/Users/joemccann/.pi/agent/git/github.com/pasky/chrome-cdp-skill/skills/chrome-cdp/scripts/cdp.mjs eval <target> "document.title"
-```
-
-### 8. Display Interactive Slide Viewer Widget
+### 10. Display Interactive Slide Viewer Widget
 
 After saving the PDF, display an interactive carousel viewer using `show_widget`. Call `visualize_read_me` first if not already called this session.
 
@@ -195,7 +244,7 @@ After saving the PDF, display an interactive carousel viewer using `show_widget`
 
 **Image loading:**
 
-The widget receives the slide images as base64 data URLs embedded in the HTML. Generate the widget HTML with all images inline:
+The widget receives the slide images as base64 data URLs embedded in the HTML:
 
 ```javascript
 const slides = [
@@ -205,38 +254,13 @@ const slides = [
 ];
 ```
 
-To convert PNGs to base64 for embedding:
+To convert PNGs to base64:
 
 ```bash
 base64 -i /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-001.png
 ```
 
-**Widget HTML template structure:**
-
-```html
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  /* Theme variables using [data-theme] selectors */
-  /* Layout styles */
-</style>
-
-<div class="viewer">
-  <header><!-- title, nav, theme toggle --></header>
-  <main><!-- current slide image --></main>
-  <nav class="thumbnails"><!-- scrollable thumbnail strip --></nav>
-  <footer><!-- PDF path, slide count --></footer>
-</div>
-
-<script>
-  const slides = [ /* base64 images */ ];
-  let current = 0;
-  // Navigation logic
-  // Theme toggle logic (per Specteron brand skill Section 0)
-  // Keyboard handlers
-</script>
-```
-
-### 9. Cleanup Screenshots
+### 11. Cleanup Screenshots
 
 After PDF is created AND widget is displayed, remove the individual PNG files:
 
@@ -244,7 +268,7 @@ After PDF is created AND widget is displayed, remove the individual PNG files:
 rm /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-*.png
 ```
 
-### 10. Report Success
+### 12. Report Success
 
 Tell the user:
 
@@ -254,12 +278,11 @@ Tell the user:
 
 ## Error Handling
 
-- If ImageMagick's `convert` is not available, try `magick convert` or install via `brew install imagemagick`
-- If a page fails to load, retry up to 3 times with increasing wait times
-- If navigation gets stuck (same page indicator after arrow key), try clicking directly on the right edge of the viewer area
+- If `page_data` fetch fails, the CloudFront URLs may have expired - re-authenticate the page
+- If ImageMagick is not available, install via `brew install imagemagick`
 
 ## Notes
 
-- Screenshots capture the viewport, so ensure the browser window is sized appropriately for readable slides
-- DocSend may have rate limiting; if pages stop loading, wait a few seconds before continuing
+- The `page_data` API returns signed CloudFront URLs that expire - download promptly after fetching
+- This approach downloads clean slide images without browser chrome
 - The skill does NOT bypass authentication — the user must authenticate in Chrome first
