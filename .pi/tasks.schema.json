@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pi Scheduled Tasks",
+  "description": "Schema for scheduled tasks that pi executes on startup based on date or interval triggers.",
+  "type": "object",
+  "required": ["tasks"],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "schedule", "status", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the task."
+          },
+          "description": {
+            "type": "string",
+            "description": "Natural language instruction for pi to execute. This is injected as a user message when the task is due."
+          },
+          "schedule": {
+            "type": "object",
+            "description": "When the task should run.",
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["type", "date"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "date",
+                    "description": "Run once at or after a specific date."
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 date-time. Task becomes due when current time >= this date."
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": ["type", "intervalMs"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "interval",
+                    "description": "Run repeatedly on an interval."
+                  },
+                  "intervalMs": {
+                    "type": "number",
+                    "description": "Interval in milliseconds between runs."
+                  },
+                  "startAfter": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Optional: don't start running until after this date."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "completed", "failed"],
+            "description": "Current status of the task."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the task was created."
+          },
+          "lastRunAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the task last ran (null if never)."
+          },
+          "completedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the task was completed (null if not yet). Only set for one-time (date) tasks."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

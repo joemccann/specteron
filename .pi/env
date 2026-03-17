@@ -1,0 +1,5 @@
+# Project-local Glimpse widget defaults
+# Loaded by widget-defaults.ts extension on session_start
+GLIMPSE_DEFAULT_WIDTH=50%
+GLIMPSE_DEFAULT_HEIGHT=50%
+GLIMPSE_DEFAULT_POSITION=top-left

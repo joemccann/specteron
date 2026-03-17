@@ -1,7 +1,13 @@
-node_modules/
-.DS_Store
-*.log
-/tmp/
+# Task logs (generated at runtime)
+.pi/task-*.log
 
-# Pi local settings (personal, not shared)
-.pi/settings.local.json
+# Gmail seen state (runtime dedup state, regenerates automatically)
+.pi/gmail-seen.json
+
+# Artifacts (generated reports)
+artifacts/
+
+# Brand assets (binary files)
+brand-guidelines/
+*.zip
+.DS_Store
