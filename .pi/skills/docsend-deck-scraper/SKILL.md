@@ -137,13 +137,22 @@ Save to a temp file for processing.
 
 ### 6. Create Output Directory
 
+First, determine the deck name from the page title or URL slug. Sanitize it: lowercase, replace spaces with hyphens, remove special characters.
+
+Example: "NEUROPHOS EXAOPS — March 2026" → `neurophos-exaops-march-2026`
+
+Create a subdirectory for this deck:
+
 ```bash
-mkdir -p /Users/joemccann/dev/apps/util/specteron/artifacts/docsend
+DECK_NAME="neurophos-exaops-march-2026"  # derived from title
+mkdir -p /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/${DECK_NAME}
 ```
 
-### 7. Download All Slide Images
+All images and the final PDF go in this deck-specific directory.
 
-Use Node.js to download all images:
+### 7. Download All Slide Images (Parallel)
+
+Use Node.js to download all images in parallel (10 concurrent downloads for speed):
 
 ```bash
 node -e "
@@ -151,7 +160,7 @@ const fs = require('fs');
 const https = require('https');
 const data = JSON.parse(fs.readFileSync('/tmp/docsend_urls.json', 'utf8'));
 
-async function downloadImage(url, filepath) {
+function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(filepath);
     https.get(url, (response) => {
@@ -161,19 +170,27 @@ async function downloadImage(url, filepath) {
   });
 }
 
-async function main() {
-  for (const item of data) {
-    const pageNum = String(item.page).padStart(3, '0');
-    const filepath = '/Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-' + pageNum + '.png';
-    console.log('Downloading page ' + item.page + '...');
-    await downloadImage(item.url, filepath);
+const DECK_DIR = '/Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>';
+
+async function downloadBatch(items, concurrency = 10) {
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const promises = batch.map(item => {
+      const pageNum = String(item.page).padStart(3, '0');
+      const filepath = DECK_DIR + '/page-' + pageNum + '.png';
+      console.log('Downloading page ' + item.page + '...');
+      return downloadImage(item.url, filepath);
+    });
+    await Promise.all(promises);
+    console.log('Batch ' + Math.ceil((i + concurrency) / concurrency) + ' complete');
   }
-  console.log('Done!');
 }
 
-main();
+downloadBatch(data, 10).then(() => console.log('Done!'));
 "
 ```
+
+This downloads 10 images at a time, completing a 49-page deck in ~5 batches instead of 49 sequential requests.
 
 ### 8. Get Deck Title
 
@@ -189,7 +206,7 @@ Use this for the PDF filename (sanitized: lowercase, hyphens, no special chars).
 ### 9. Compile PDF
 
 ```bash
-magick /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-*.png /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>.pdf
+magick /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>/page-*.png /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>/<deck-name>.pdf
 ```
 
 If `magick` is not available, try `convert` or install via `brew install imagemagick`.
@@ -260,13 +277,15 @@ To convert PNGs to base64:
 base64 -i /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-001.png
 ```
 
-### 11. Cleanup Screenshots
+### 11. Cleanup Screenshots (Optional)
 
-After PDF is created AND widget is displayed, remove the individual PNG files:
+After PDF is created AND widget is displayed, optionally remove the individual PNG files:
 
 ```bash
-rm /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/page-*.png
+rm /Users/joemccann/dev/apps/util/specteron/artifacts/docsend/<deck-name>/page-*.png
 ```
+
+Or keep them for the interactive viewer widget to use.
 
 ### 12. Report Success
 
