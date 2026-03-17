@@ -14,19 +14,6 @@ A pi extension that runs scheduled tasks in **background `pi -p` processes** —
 - **Task logs** — output captured to `.pi/task-{id}.log`
 - **Commands**: `/tasks`, `/tasks-add`, `/tasks-remove`
 
-### 📧 Gmail Inbox Monitor
-
-An interval task that checks Gmail for new unread emails every 10 minutes:
-
-1. Connects to Chrome via CDP (Chrome DevTools Protocol)
-2. Scrapes unread emails from Gmail inbox (sender, subject, time, thread links)
-3. Queries **Gmail's built-in Gemini AI** ("Ask Gmail") for intelligent per-email summaries
-4. Displays results in a native macOS widget (via [Glimpse](https://github.com/nicobailon/glimpseui)):
-   - Clickable subject links that open directly in Chrome
-   - AI-generated summaries with ✨ Gemini badge
-   - Light/dark mode toggle (defaults to OS setting)
-   - Only shows **new** emails not seen in prior runs (deduplication via `.pi/gmail-seen.json`)
-
 ### 🔗 Glimpse Enhancements
 
 Patches to `pi-generative-ui` and its `glimpseui` dependency:
@@ -98,33 +85,9 @@ GLIMPSE_DEFAULT_POSITION=top-left
 └── tasks.schema.json          # JSON schema for tasks.json
 ```
 
-## Task Schema
+## Scheduled Tasks
 
-Tasks are defined in `.pi/tasks.json`:
-
-```jsonc
-{
-  "tasks": [
-    {
-      "id": "my-task",
-      "description": "Natural language instruction for pi to execute",
-      "schedule": {
-        "type": "date",          // Run once at a specific date
-        "date": "2026-04-01T12:00:00.000Z"
-      },
-      // OR
-      "schedule": {
-        "type": "interval",      // Run repeatedly
-        "intervalMs": 600000     // Every 10 minutes
-      },
-      "status": "pending",       // pending | running | completed | failed
-      "createdAt": "...",
-      "lastRunAt": null,
-      "completedAt": null
-    }
-  ]
-}
-```
+Recurring tasks are defined in `.pi/tasks.json` and documented in [`TASKS.md`](TASKS.md).
 
 ## Commands
 
