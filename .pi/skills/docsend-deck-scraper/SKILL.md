@@ -1,6 +1,6 @@
 ---
 name: docsend-deck-scraper
-description: Scrape a DocSend deck to PDF and interactive viewer. Takes a DocSend URL (must be authenticated in Chrome), extracts slide image URLs via page_data API, downloads them, compiles into a PDF, and displays a carousel widget. Usage: /skill:docsend-deck-scraper <url>
+description: "Scrape a DocSend deck to PDF and interactive viewer. Takes a DocSend URL (must be authenticated in Chrome), extracts slide image URLs via page_data API, downloads them, compiles into a PDF, and displays a carousel widget. Usage: /skill:docsend-deck-scraper <url>"
 ---
 
 # DocSend Deck Scraper
