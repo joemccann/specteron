@@ -21,9 +21,45 @@
 - Specify exact expected behavior for any widget change: colors, layout, content format, theme toggle behavior. Do not leave visual output to inference.
 - CSS variables: Confirm a variable exists in `brand/brand/specteron-design-tokens.json` before referencing it. Undefined CSS variables silently produce transparent/invisible output.
 
+## Persistent Widgets
+
+The project includes a **widget registry system** for maintaining widgets across pi sessions:
+
+### Architecture
+1. **`update_widget` tool** — Creates or updates a persistent widget by title. If a widget with the same title is already open, it updates the content in-place. Otherwise, it spawns a new window that persists after the pi process exits.
+
+2. **Relay process** (`widget-relay.mjs`) — Each persistent widget has a relay that:
+   - Spawns Glimpse and keeps the stdin pipe open
+   - Listens on a Unix domain socket for update commands
+   - Handles `open-url` messages to open links in the default browser
+
+3. **Registry file** (`.pi/widget-registry.json`) — Tracks active widgets with relay PIDs and socket paths.
+
+### External Links
+Widgets automatically intercept link clicks and open them in the default browser. The wrapper script:
+- Captures click events on `<a href="...">` elements
+- Sends `{ type: "open-url", url: href }` via `window.glimpse.send()`
+- The relay runs `open <url>` on macOS
+
+### Commands
+- `/widgets` — List all active persistent widgets
+- `close_widget` tool — Close a widget by title
+
+### Usage in Scheduled Tasks
+For tasks that display widgets (e.g., `gmail-inbox-monitor`, `linkedin-inbox-cleaner`):
+1. Use `update_widget` instead of `show_widget`
+2. The widget updates in-place on subsequent runs
+3. Links open in the default browser when clicked
+4. Widget window stays open after task completes
+
 ## TypeScript Extensions
 
-The project has TS extensions in `.pi/extensions/` (`task-scheduler.ts`, `widget-defaults.ts`) and patched sources in `.pi/patches/`. When modifying these, run `npx tsc --noEmit` to catch type errors before committing.
+Extensions in `.pi/extensions/`:
+- `task-scheduler.ts` — Scheduled task execution with background `pi -p` processes
+- `widget-defaults.ts` — Project-local Glimpse widget positioning defaults
+- `widget-registry.ts` — Persistent widget management across sessions
+
+Patched sources live in `.pi/patches/`. When modifying extensions, run `npx tsc --noEmit` to catch type errors before committing.
 
 ## Tasks
 
@@ -33,11 +69,16 @@ Recurring tasks that run automatically via the [task scheduler](.pi/extensions/t
 - Task logs go to `.pi/task-{id}.log` — check these for debugging failed tasks rather than re-running interactively.
 - Always call `complete_task` with the task ID at the end of task execution.
 
+### LinkedIn Task Notes
+- **Thread URLs are not in the DOM** — Click each conversation and capture `window.location.href` after the URL updates
+- **URL format** — `https://www.linkedin.com/messaging/thread/2-{base64-encoded-id}/`
+- **Unread detection** — Use the "Unread" filter button
+
 ## Brand System Enforcement
 
 **Every time you generate visual output in this project, you MUST load and follow the Specteron brand skill first.**
 
-Before creating any `show_widget`, `design_deck`, HTML, SVG, CSS, chart, diagram, or UI mockup:
+Before creating any `show_widget`, `update_widget`, `design_deck`, HTML, SVG, CSS, chart, diagram, or UI mockup:
 1. Read `.pi/skills/specteron-brand/SKILL.md` for the complete design system
 2. Apply all color tokens, typography, spacing, and component rules exactly
 3. Reference `brand/brand/specteron-design-tokens.json` for machine-readable tokens
