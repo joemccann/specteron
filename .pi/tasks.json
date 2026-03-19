@@ -22,19 +22,19 @@
       },
       "status": "pending",
       "createdAt": "2026-03-17T14:30:00.000Z",
-      "lastRunAt": "2026-03-18T20:15:57.241Z",
+      "lastRunAt": "2026-03-19T18:04:13.325Z",
       "completedAt": null
     },
     {
       "id": "linkedin-inbox-cleaner",
-      "description": "Navigate to https://www.linkedin.com/messaging/ using Chrome CDP. Once loaded, scroll down the conversation list until no more messages arrive.\n\nFor each conversation:\n1. Click to open it and capture the URL\n2. Analyze the message content\n3. If it's someone trying to sell something or is generic spam, mark it read\n4. If it's important/personal, add to the results table\n\nDisplay results using update_widget (NOT show_widget) with:\n  title: 'linkedin_inbox'\n  html: <table with columns: Name, Summary, Link>\n\nThe table links should be clickable and open in the default browser.\n\nRead .pi/skills/specteron-brand/WIDGET-TEMPLATE.md for styling requirements.\n\nAfter completing, call complete_task with id \"linkedin-inbox-cleaner\".",
+      "description": "Navigate to https://www.linkedin.com/messaging/ using Chrome CDP.\n\nSTEP 1: FILTER FOR UNREAD MESSAGES ONLY\nClick the 'Unread' filter button to show only unread conversations. Find it with:\n  var unreadBtn = document.querySelector('button[aria-label=\"Filter messages by Unread\"]') || [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Unread');\nClick it if found. Wait 2 seconds for the list to filter.\n\nSTEP 2: CHECK IF ANY UNREAD EXIST\nCount the conversations in the filtered list:\n  var convos = document.querySelectorAll('.msg-conversations-container__conversations-list li.msg-conversation-listitem');\nIf convos.length === 0, there are no unread messages. In this case:\n  - Do NOT open any widget\n  - Just call complete_task with id \"linkedin-inbox-cleaner\" and exit\n\nSTEP 3: PROCESS UNREAD CONVERSATIONS\nFor each conversation in the filtered unread list:\n1. Click to open it and capture the URL (wait for window.location.href to update)\n2. Analyze the message content\n3. If it's someone trying to sell something or is generic spam, mark it read (click the ... menu > Mark as read)\n4. If it's important/personal, add to the results table\n\nSTEP 4: DISPLAY RESULTS (only if there are important messages)\nIf there are important messages to show, display using update_widget (NOT show_widget) with:\n  title: 'linkedin_inbox'\n  html: <table with columns: Name, Summary, Link>\n\nIf ALL unread messages were spam (none important), skip the widget entirely.\n\nThe table links should be clickable and open in the default browser.\n\nRead .pi/skills/specteron-brand/WIDGET-TEMPLATE.md for styling requirements.\n\nAfter completing, call complete_task with id \"linkedin-inbox-cleaner\".",
       "schedule": {
         "type": "interval",
         "intervalMs": 86400000
       },
       "status": "pending",
       "createdAt": "2026-03-17T17:41:44.763Z",
-      "lastRunAt": "2026-03-18T18:15:17.848Z",
+      "lastRunAt": "2026-03-19T18:27:03.019Z",
       "completedAt": null
     }
   ]

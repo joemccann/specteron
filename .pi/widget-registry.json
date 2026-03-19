@@ -1,10 +1,10 @@
 {
   "widgets": [
     {
-      "title": "gmail_inbox",
-      "relayPid": 78354,
-      "socketPath": "/Users/joemccann/dev/apps/util/specteron/.pi/sockets/widget-gmail_inbox.sock",
-      "createdAt": "2026-03-18T20:01:10.377Z"
+      "title": "linkedin_inbox",
+      "relayPid": 58051,
+      "socketPath": "/Users/joemccann/dev/apps/util/specteron/.pi/sockets/widget-linkedin_inbox.sock",
+      "createdAt": "2026-03-19T18:26:57.306Z"
     }
   ]
 }
